@@ -8,16 +8,16 @@
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD. Register as an anonymous module and set browser global
-    define(['underscore', 'backbone', 'jquery'], function (_, Backbone, $) {
-      return (root.Backbone = factory(_, Backbone, $));
+    define(['underscore', 'backbone', 'jquery', 'localforage'], function (_, Backbone, $, localforage) {
+      return (root.Backbone = factory(_, Backbone, $, localforage));
     });
   } else if (typeof exports !== 'undefined' && typeof require !== 'undefined') {
-    module.exports = factory(require('underscore'), require('backbone'), require('jquery'));
+    module.exports = factory(require('underscore'), require('backbone'), require('jquery'), require('localforage'));
   } else {
     // Browser globals
-    root.Backbone = factory(root._, root.Backbone, root.jQuery);
+    root.Backbone = factory(root._, root.Backbone, root.jQuery, root.localforage);
   }
-}(this, function (_, Backbone, $) {
+}(this, function (_, Backbone, $, localforage) {
 
   // Setup
   var superMethods = {
@@ -29,6 +29,11 @@
     var supported = typeof window.localStorage !== 'undefined';
     if (supported) {
       try {
+
+
+        // FIXME: update To localforage
+
+
         // impossible to write on some platforms when private browsing is on and
         // throws an exception = local storage not supported.
         localStorage.setItem('test_support', 'test_support');
@@ -156,7 +161,7 @@
     delete Backbone.fetchCache._cache[key];
     Backbone.fetchCache.setLocalStorage();
   }
-  
+
   function reset() {
     // Clearing all cache items
     Backbone.fetchCache._cache = {};
@@ -165,7 +170,13 @@
   function setLocalStorage() {
     if (!supportLocalStorage || !Backbone.fetchCache.localStorage) { return; }
     try {
-      localStorage.setItem(Backbone.fetchCache.getLocalStorageKey(), JSON.stringify(Backbone.fetchCache._cache));
+      localforage.setItem(Backbone.fetchCache.getLocalStorageKey(), JSON.stringify(Backbone.fetchCache._cache)
+      .then(function () {
+        //Item set successfully
+      }).catch(function (err) {
+        console.error('Error fetching local storage', err);
+        // we got an error
+      });
     } catch (err) {
       var code = err.code || err.number || err.message;
       if (code === 22 || code === 1014) {
@@ -178,8 +189,14 @@
 
   function getLocalStorage() {
     if (!supportLocalStorage || !Backbone.fetchCache.localStorage) { return; }
-    var json = localStorage.getItem(Backbone.fetchCache.getLocalStorageKey()) || '{}';
-    Backbone.fetchCache._cache = JSON.parse(json);
+    var default = '{}'
+    localforage.getItem(Backbone.fetchCache.getLocalStorageKey());
+    }).then(function (cache) {
+      Backbone.fetchCache._cache = JSON.parse(cache || default);
+    }).catch(function (err) {
+      console.error('Error fetching local storage', err);
+      Backbone.fetchCache._cache = JSON.parse(value || default);
+    });
   }
 
   function nextTick(fn) {

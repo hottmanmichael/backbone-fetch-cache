@@ -20,7 +20,9 @@
     "cache"
   ],
   "main": "./backbone.fetch-cache.js",
-  "dependencies": {},
+  "dependencies": {
+    "localforage": "^1.5.3"
+  },
   "devDependencies": {
     "grunt": "latest",
     "grunt-contrib-connect": "",
